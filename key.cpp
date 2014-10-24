@@ -2,51 +2,79 @@
 // This code is licensed under GPLv3, see LICENSE.txt for details.
 
 #include "key.h"
+#include <fstream>
+#include "keygenerator.h"
 
 namespace otp
 {
 
-Key::Key()
+Key::Key(const std::string& filename):
+    filename(filename),
+    usedBlocks(filename)
 {
 }
 
-Key::Key(const std::string& filename)
+Position Key::encrypt(std::vector<char>& data)
 {
-
+    auto position = usedBlocks.getFreePosition(data.size());
+    return encrypt(data, position);
 }
 
-Key::~Key()
+Position Key::encrypt(std::vector<char>& data, Position pos)
 {
+    // Open the key file at the correct position
+    std::fstream keyFile(filename.c_str(), std::ios::binary);
+    keyFile.seekg(pos);
+
+    // Read the needed portion of the key file
+    std::vector<char> keyData(data.size());
+    keyFile.read(keyData.data(), keyData.size());
+
+    // Encrypt the data using the key data
+    unsigned i = 0;
+    for (char& c: data)
+        c ^= keyData[i++];
+
+    // Overwrite the key data with new random data
+    KeyGenerator::generate(keyData, keyData.size());
+
+    // Save the key data back to the file
+    keyFile.seekp(pos);
+    keyFile.write(keyData.data(), keyData.size());
+    keyFile.close();
+
+    // Save the used range of data
+    usedBlocks.markAsUsed(pos, keyData.size());
+
+    // Return the position used
+    return pos;
 }
 
-void Key::encrypt(std::vector<char>& data)
+Position Key::bytesTotal() const
 {
-
+    return fileSize;
 }
 
-std::vector<char> Key::encryptMessage(const std::string& message)
+Position Key::bytesUsable() const
 {
-
+    // freeSpace = fileSize - usedBlocks.getSize();
+    return freeSpace;
 }
 
-Key::Position Key::bytesTotal() const
+Position Key::bytesTotalRange() const
 {
-
+    return (right - left);
 }
 
-Key::Position Key::bytesRemaining() const
+Position Key::bytesUsableRange() const
 {
-
+    return (bytesTotalRange() - usedBlocks.getSize(left, right));
 }
 
-Key::Position Key::bytesRemaining(Position pos) const
+void Key::setKeyRange(Position minimum, Position maximum)
 {
-
-}
-
-void Key::setPosition(Position pos)
-{
-
+    left = minimum;
+    right = maximum;
 }
 
 

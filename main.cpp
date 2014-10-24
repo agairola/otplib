@@ -23,7 +23,11 @@ int main()
     std::cout << "Enter some text:\n";
     std::string text;
     while (getline(std::cin, text))
-        printBufferInHex(keyFile.encryptMessage(text));
+    {
+        std::vector<char> data(text.begin(), text.end());
+        keyFile.encrypt(data);
+        printBufferInHex(data);
+    }
     return 0;
 }
 

@@ -4,9 +4,9 @@
 #ifndef KEY_H
 #define KEY_H
 
-#include <cstddef>
 #include <string>
 #include <vector>
+#include "blocktracker.h"
 
 namespace otp
 {
@@ -62,19 +62,17 @@ Everytime something is encrypted with a portion of the key file, that part
 class Key
 {
     public:
-        using Position = std::size_t;
-
-        Key();
         Key(const std::string& filename);
-        virtual ~Key();
 
         // Encryption ---------------------------------------------------------
 
         // Encrypts (or decrypts) a buffer of data in place
-        void encrypt(std::vector<char>& data);
+        // The position used is up to the algorithm, but will be within range
+        // Returns the used position, so that something else knows how to decrypt it
+        Position encrypt(std::vector<char>& data);
 
-        // Encrypts a plain-text message, and returns a buffer
-        std::vector<char> encryptMessage(const std::string& message);
+        // Same as above, but the position specified will be used to encrypt/decrypt the data
+        Position encrypt(std::vector<char>& data, Position pos);
 
 
         // Status -------------------------------------------------------------
@@ -91,6 +89,7 @@ class Key
         // Returns the available bytes in the current range
         Position bytesUsableRange() const;
 
+
         // Positions/blocks ---------------------------------------------------
 
         // Set the range of key data to use (default is entire file)
@@ -106,6 +105,10 @@ class Key
         // Range of bytes to use
         Position left;
         Position right;
+
+        // The current file size and usable space
+        Position fileSize;
+        Position freeSpace;
 };
 
 }
