@@ -1,9 +1,14 @@
+// Copyright (C) 2014 Eric Hebert (ayebear)
+// This code is licensed under GPLv3, see LICENSE.txt for details.
+
 #ifndef BLOCKTRACKER_H
 #define BLOCKTRACKER_H
 
 #include <cstddef>
 #include <string>
-#include <set>
+#include <deque>
+#include <fstream>
+#include "comparablerange.h"
 
 namespace otp
 {
@@ -12,51 +17,58 @@ namespace otp
 using Position = std::size_t;
 
 /*
-This class keeps track of used blocks of a key file.
+TODO:
+    Switch to a free list, it will be much more efficient.
+    There will be minimally more fragmentation, but allocating will be
+        simpler and faster, since what we need is right there.
+
+This class keeps track of free byte ranges of a key file.
 It uses an index file to store this information.
-
-Notes:
-    Build up some kind of tree/map/set/table to lookup
-        and maintain everything.
-    Have a simple way to handle edge cases and errors, such as when the key
-        data is depleted, or there is not enough space to encrypt the data.
-
-Other possibility:
-    If this uses a free list instead of a list of the used blocks,
-        it could allocate things in O(1), since it would just look directly
-        at the end of the free list or something.
-
-Easiest method:
-    Used fixed block sizes, so there could be a single list of used blocks.
-    The problem with this is that some of the key file will be wasted...
+    There is a list of ranges of free bytes. Example:
+    Start End
+    100 200
+    500 550
+    600 900
 */
 class BlockTracker
 {
     public:
         BlockTracker(const std::string& keyFilename);
+        ~BlockTracker();
+
+        // Allocates space for a certain number of bytes within a possible range
+        // Returns a usable position, or -1 if unable to allocate
+        Position allocate(Position size, Position left = 0, Position right = 0);
 
         // Marks a range of blocks as used
-        void markAsUsed(Position pos, unsigned size);
-
-        // Finds a free position in the entire range to fit the size of the data
-        Position getFreePosition(unsigned size) const;
-
-        // Same as above, but limits the search to a specific range
-        Position getFreePosition(unsigned size, Position left, Position right) const;
+        void markAsUsed(Position pos, Position size);
 
         // Returns the size of the total file
         Position getSize() const;
-        Position getSize(Position left, Position right) const;
+
+        // Returns the total free space
+        Position getFreeSpace() const;
+
+        // Returns the free space in the specified range
+        Position getFreeSpace(Position left, Position right) const;
 
     private:
 
-        // Optimizes the ranges of blocks
-        void optimize();
+        // Reads an index file into memory
+        bool loadIndexFile(const std::string& filename);
 
-        std::string keyFilename; // Filename of key file (key)
+        // Writes an index file from memory
+        bool saveIndexFile(const std::string& filename);
+
+        using RangeType = ComparableRange<Position>;
+
         std::string indexFilename; // Filename of index file (key.index)
-        std::set<Position> usedBlocks; // Keeps track of all used blocks
+        std::deque<RangeType> freeBytes; // Ranges of free bytes
+        Position fileSize; // Total size of the key file
 };
+
+// Returns size of a file
+std::ifstream::pos_type getFileSize(const std::string& filename);
 
 }
 

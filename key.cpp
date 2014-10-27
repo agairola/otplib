@@ -3,6 +3,7 @@
 
 #include "key.h"
 #include <fstream>
+#include <iostream>
 #include "keygenerator.h"
 
 namespace otp
@@ -12,23 +13,32 @@ Key::Key(const std::string& filename):
     filename(filename),
     usedBlocks(filename)
 {
+    left = 0;
+    right = usedBlocks.getSize() - 1;
 }
 
 Position Key::encrypt(std::vector<char>& data)
 {
-    auto position = usedBlocks.getFreePosition(data.size());
-    return encrypt(data, position);
+    auto position = usedBlocks.allocate(data.size(), left, right);
+    return encrypt(data, position, false);
 }
 
-Position Key::encrypt(std::vector<char>& data, Position pos)
+Position Key::encrypt(std::vector<char>& data, Position pos, bool needToAllocate)
 {
     // Open the key file at the correct position
-    std::fstream keyFile(filename.c_str(), std::ios::binary);
+    std::fstream keyFile(filename.c_str(), std::ios::binary | std::ios::in | std::ios::out);
     keyFile.seekg(pos);
 
     // Read the needed portion of the key file
     std::vector<char> keyData(data.size());
     keyFile.read(keyData.data(), keyData.size());
+
+    // Debugging code
+    std::cout << std::dec << "\nEncrypting " << keyData.size() << " bytes at " << pos << "...\n\n";
+    std::cout << "Original:  ";
+    printBufferInHex(data);
+    std::cout << "Key:       ";
+    printBufferInHex(keyData);
 
     // Encrypt the data using the key data
     unsigned i = 0;
@@ -44,7 +54,8 @@ Position Key::encrypt(std::vector<char>& data, Position pos)
     keyFile.close();
 
     // Save the used range of data
-    usedBlocks.markAsUsed(pos, keyData.size());
+    if (needToAllocate)
+        usedBlocks.markAsUsed(pos, keyData.size());
 
     // Return the position used
     return pos;
@@ -52,13 +63,12 @@ Position Key::encrypt(std::vector<char>& data, Position pos)
 
 Position Key::bytesTotal() const
 {
-    return fileSize;
+    return usedBlocks.getSize();
 }
 
 Position Key::bytesUsable() const
 {
-    // freeSpace = fileSize - usedBlocks.getSize();
-    return freeSpace;
+    return usedBlocks.getFreeSpace();
 }
 
 Position Key::bytesTotalRange() const
@@ -68,7 +78,7 @@ Position Key::bytesTotalRange() const
 
 Position Key::bytesUsableRange() const
 {
-    return (bytesTotalRange() - usedBlocks.getSize(left, right));
+    return usedBlocks.getFreeSpace(left, right);
 }
 
 void Key::setKeyRange(Position minimum, Position maximum)
@@ -77,5 +87,11 @@ void Key::setKeyRange(Position minimum, Position maximum)
     right = maximum;
 }
 
+void printBufferInHex(const std::vector<char>& data)
+{
+    for (char c: data)
+        std::cout << std::hex << (int)((unsigned char)c) << ' ';
+    std::cout << "\n";
+}
 
 }

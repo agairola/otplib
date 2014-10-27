@@ -5,8 +5,6 @@
 #include "key.h"
 #include "keygenerator.h"
 
-void printBufferInHex(const std::vector<char>& data);
-
 void genKeyFile();
 
 int main()
@@ -14,7 +12,7 @@ int main()
 //    genKeyFile();
 //    return 0;
 
-    std::cout << "OTPlib Test v1.0.0\n";
+    std::cout << "OTPlib Test v1.0.1\n";
     std::cout << "Enter filename of key file: ";
     std::string filename;
     std::cin >> filename;
@@ -24,19 +22,18 @@ int main()
     std::string text;
     while (getline(std::cin, text))
     {
-        std::vector<char> data(text.begin(), text.end());
-        keyFile.encrypt(data);
-        printBufferInHex(data);
-    }
-    return 0;
-}
+        //std::cin >> text;
 
-void printBufferInHex(const std::vector<char>& data)
-{
-    for (char c: data)
-    {
-        std::cout << std::hex << c;
+        std::vector<char> data(text.begin(), text.end());
+
+        // Encrypt the user's input
+        keyFile.encrypt(data);
+
+        std::cout << "Encrypted: ";
+        otp::printBufferInHex(data);
     }
+
+    return 0;
 }
 
 void genKeyFile()

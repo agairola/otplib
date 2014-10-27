@@ -12,24 +12,6 @@ namespace otp
 {
 
 /*
-TODO:
-    Keep track of used blocks.
-        They would still be securely erased, but the file wouldn't get truncated.
-        This would solve the issue of a networked application with multiple
-            clients accessing the same parts of the file, like in OTP Chat.
-        This data could just be stored in another file next to the key file.
-            That way, the key files can still be easily generated.
-            This file could contain a list of the ranges of blocks used.
-        The networked software would need to agree on which portions are allowed to be used.
-            This Key class would need to allow specifying a position/range to use to encrypt the data.
-            Encrypting should return a new position of available data.
-        With blocks, the key could be used up in left-right order.
-            This will allow for custom positions without worrying about size.
-    Do some low-level verification of the secure erase algorithms, to make sure common
-        file systems aren't reallocating the blocks being overwritten.
-*/
-
-/*
 File layout/design
 
 key
@@ -39,7 +21,7 @@ key
         However, it increases the chances of someone obtaining your common unused key data.
 
 key.index
-    List of all used blocks (ranges of bytes)
+    List of all free blocks (ranges of bytes)
         Using ranges of bytes instead of fixed block sizes to prevent wasting valuable key data.
     2345-2371
     100-150
@@ -57,7 +39,7 @@ key.index
 /*
 This class reads from a key file of (ideally) random data.
 Everytime something is encrypted with a portion of the key file, that part
-    gets securely erased, and then truncated.
+    gets securely erased, and then removed from the free ranges of bytes.
 */
 class Key
 {
@@ -69,10 +51,12 @@ class Key
         // Encrypts (or decrypts) a buffer of data in place
         // The position used is up to the algorithm, but will be within range
         // Returns the used position, so that something else knows how to decrypt it
+        // Note: This is commonly used for encryption
         Position encrypt(std::vector<char>& data);
 
         // Same as above, but the position specified will be used to encrypt/decrypt the data
-        Position encrypt(std::vector<char>& data, Position pos);
+        // Note: This is commonly used for decryption
+        Position encrypt(std::vector<char>& data, Position pos, bool needToAllocate = true);
 
 
         // Status -------------------------------------------------------------
@@ -105,11 +89,9 @@ class Key
         // Range of bytes to use
         Position left;
         Position right;
-
-        // The current file size and usable space
-        Position fileSize;
-        Position freeSpace;
 };
+
+void printBufferInHex(const std::vector<char>& data);
 
 }
 
