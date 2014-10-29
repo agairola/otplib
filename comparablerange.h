@@ -6,6 +6,13 @@
 
 #include <string>
 
+namespace otp
+{
+
+/*
+A simple class that holds a minimum and maximum value.
+Its purpose is to keep track of free block ranges in the OTP library.
+*/
 template <typename Type>
 class ComparableRange
 {
@@ -22,28 +29,37 @@ public:
     {
     }
 
+    // Returns the size of the range
     Type getSize() const
     {
-        return (maximum - minimum);
+        return (maximum - minimum + 1);
     }
 
+    // Returns the size of the range with boundaries
     Type getSize(Type left, Type right) const
     {
         left = std::max(minimum, left);
         right = std::min(maximum, right);
-        return (right - left);
+        Type size = 0;
+        // Makes sure the ranges are overlapping to prevent getting a negative result
+        if (right >= left)
+            size = (right - left + 1);
+        return size;
     }
 
+    // Compares the minimum value with another range
     bool operator<(const ComparableRange& rhs) const
     {
         return (minimum < rhs.minimum);
     }
 
+    // Checks if a number is within the range
     bool operator==(Type num) const
     {
         return (minimum <= num && num <= maximum);
     }
 
+    // Used for writing to a file
     std::string toString() const
     {
         return (std::to_string(minimum) + ' ' + std::to_string(maximum));
@@ -52,5 +68,7 @@ public:
     Type minimum;
     Type maximum;
 };
+
+}
 
 #endif

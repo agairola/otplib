@@ -52,26 +52,35 @@ class Key
         // The position used is up to the algorithm, but will be within range
         // Returns the used position, so that something else knows how to decrypt it
         // Note: This is commonly used for encryption
-        Position encrypt(std::vector<char>& data);
+        Status encrypt(std::vector<char>& data);
 
         // Same as above, but the position specified will be used to encrypt/decrypt the data
         // Note: This is commonly used for decryption
-        Position encrypt(std::vector<char>& data, Position pos, bool needToAllocate = true);
+        Status encrypt(std::vector<char>& data, Position pos, bool needToAllocate = true);
 
 
         // Status -------------------------------------------------------------
+
+        // Returns true if the key file was opened successfully (based on its size)
+        explicit operator bool() const;
 
         // Returns the size of the entire key file
         Position bytesTotal() const;
 
         // Returns how much more of the key file can be used
-        Position bytesUsable() const;
+        Position bytesFree() const;
+
+        // Returns how much of the key file was already used
+        Position bytesUsed() const;
 
         // Returns the size of the range
         Position bytesTotalRange() const;
 
         // Returns the available bytes in the current range
-        Position bytesUsableRange() const;
+        Position bytesFreeRange() const;
+
+        // Returns the used bytes in the current range
+        Position bytesUsedRange() const;
 
 
         // Positions/blocks ---------------------------------------------------
@@ -90,8 +99,6 @@ class Key
         Position left;
         Position right;
 };
-
-void printBufferInHex(const std::vector<char>& data);
 
 }
 

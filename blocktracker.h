@@ -16,6 +16,14 @@ namespace otp
 // File position, which should allow for larger sizes than 32-bit ints
 using Position = std::size_t;
 
+// Type that contains a position and status
+struct Status
+{
+    Status(): position(0), status(false) {}
+    Position position;
+    bool status;
+};
+
 /*
 TODO:
     Switch to a free list, it will be much more efficient.
@@ -33,12 +41,15 @@ It uses an index file to store this information.
 class BlockTracker
 {
     public:
+        // Needs to be constructed with the filename of a key file
         BlockTracker(const std::string& keyFilename);
+
+        // Automatically saves the index file on exit
         ~BlockTracker();
 
         // Allocates space for a certain number of bytes within a possible range
         // Returns a usable position, or -1 if unable to allocate
-        Position allocate(Position size, Position left = 0, Position right = 0);
+        Status allocate(Position size, Position left = 0, Position right = 0);
 
         // Marks a range of blocks as used
         void markAsUsed(Position pos, Position size);
@@ -52,13 +63,16 @@ class BlockTracker
         // Returns the free space in the specified range
         Position getFreeSpace(Position left, Position right) const;
 
+        // Saves the index file in case anything goes wrong
+        bool saveIndexFile() const;
+
     private:
 
         // Reads an index file into memory
         bool loadIndexFile(const std::string& filename);
 
         // Writes an index file from memory
-        bool saveIndexFile(const std::string& filename);
+        bool saveIndexFile(const std::string& filename) const;
 
         using RangeType = ComparableRange<Position>;
 

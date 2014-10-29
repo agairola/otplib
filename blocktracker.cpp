@@ -14,9 +14,12 @@ BlockTracker::BlockTracker(const std::string& keyFilename)
     // Calculate the total key file size
     fileSize = getFileSize(keyFilename);
 
-    // Load the index file
-    indexFilename = keyFilename + ".index";
-    loadIndexFile(indexFilename);
+    if (fileSize > 0)
+    {
+        // Load the index file if the key file is valid
+        indexFilename = keyFilename + ".index";
+        loadIndexFile(indexFilename);
+    }
 }
 
 BlockTracker::~BlockTracker()
@@ -24,31 +27,33 @@ BlockTracker::~BlockTracker()
     saveIndexFile(indexFilename);
 }
 
-Position BlockTracker::allocate(Position size, Position left, Position right)
+Status BlockTracker::allocate(Position size, Position left, Position right)
 {
     // By default (only passing in the size), the entire range of bytes will be used
     if (right == 0 || left > right)
-        right = fileSize;
-
-    // TODO: Handle special cases, like when size > right - left
+        right = fileSize - 1;
 
     // Find an available position for this size
-    Position available = 0;
-    for (unsigned i = 0; i < freeBytes.size(); ++i)
+    Status available;
+    for (unsigned i = 0; !available.status && i < freeBytes.size(); ++i)
     {
         // Split case example
-        // Free ranges: 0-1000
+        // Free ranges: 0-999
         // Left: 200, Right: 700
         // Size: 100
-        // New ranges: 0-199, 300-1000
+        // New ranges: 0-199, 300-999 (200-299 used)
 
         // If we found a range that will fit the data
-        if (size < freeBytes[i].getSize(left, right))
+        if (size <= freeBytes[i].getSize(left, right))
         {
             // Check if we need to split the ranges
             if (left > freeBytes[i].minimum)
             {
+                // Save the available position
+                available.position = left;
+
                 std::cout << "Left > min (" << left << " > " << freeBytes[i].minimum << ") inserted range at " << i << ".\n";
+
                 // Create a new range, and split at the left
                 freeBytes.insert(freeBytes.begin() + i, freeBytes[i]);
                 freeBytes[i].maximum = left - 1;
@@ -57,12 +62,16 @@ Position BlockTracker::allocate(Position size, Position left, Position right)
             else
             {
                 // Save the available position
-                available = freeBytes[i].minimum;
+                available.position = freeBytes[i].minimum;
 
                 // Resize the range (marking the space as used)
                 freeBytes[i].minimum += size;
+
+                // If this range is empty, then remove it
+                if (freeBytes[i].getSize() == 0)
+                    freeBytes.erase(freeBytes.begin() + i);
             }
-            return available;
+            available.status = true;
         }
     }
 
@@ -111,8 +120,16 @@ Position BlockTracker::getFreeSpace() const
 
 Position BlockTracker::getFreeSpace(Position left, Position right) const
 {
-    // TODO: Implement this
-    return (right - left);
+    // Add up the ranges with their boundaries
+    Position freeSpace = 0;
+    for (const auto& range: freeBytes)
+        freeSpace += range.getSize(left, right);
+    return freeSpace;
+}
+
+bool BlockTracker::saveIndexFile() const
+{
+    return saveIndexFile(indexFilename);
 }
 
 bool BlockTracker::loadIndexFile(const std::string& filename)
@@ -143,7 +160,7 @@ bool BlockTracker::loadIndexFile(const std::string& filename)
     return true;
 }
 
-bool BlockTracker::saveIndexFile(const std::string& filename)
+bool BlockTracker::saveIndexFile(const std::string& filename) const
 {
     bool status = false;
 
@@ -162,8 +179,12 @@ bool BlockTracker::saveIndexFile(const std::string& filename)
 
 std::ifstream::pos_type getFileSize(const std::string& filename)
 {
+    // Opens a file at then end, to get the size of the file
     std::ifstream file(filename.c_str(), std::ios::binary | std::ios::ate);
-    return file.tellg();
+    std::ifstream::pos_type fileSize = 0;
+    if (file)
+        fileSize = file.tellg();
+    return fileSize;
 }
 
 }
