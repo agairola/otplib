@@ -48,15 +48,14 @@ class Key
 
         // Encryption ---------------------------------------------------------
 
-        // Encrypts (or decrypts) a buffer of data in place
-        // The position used is up to the algorithm, but will be within range
+        // Encrypts a buffer of data in place
+        // The position used is determined by the algorithm, but will be within range
         // Returns the used position, so that something else knows how to decrypt it
-        // Note: This is commonly used for encryption
         Status encrypt(std::vector<char>& data);
 
-        // Same as above, but the position specified will be used to encrypt/decrypt the data
-        // Note: This is commonly used for decryption
-        Status encrypt(std::vector<char>& data, Position pos, bool needToAllocate = true);
+        // Decrypts a buffer of data in place, using the position returned from encrypt()
+        // Returns true if successful
+        bool decrypt(std::vector<char>& data, Position pos);
 
 
         // Status -------------------------------------------------------------
@@ -92,10 +91,18 @@ class Key
         void setKeyRange(Position minimum = 0, Position maximum = 0);
 
     private:
-        std::string filename; // Name of the key file
-        BlockTracker usedBlocks; // List of already used blocks that cannot be reused
 
-        // Range of bytes to use
+        // Encrypts/decrypts a buffer at a specified position
+        // Handles using and overwriting the key file
+        // Does NOT do anything with the free blocks
+        // Returns true if successful
+        bool crypt(std::vector<char>& data, Position pos) const;
+
+        std::string filename; // Name of the key file
+        BlockTracker freeBlocks; // List of free blocks that can still be used
+
+        // Range of bytes to stay within when encrypting (only used when the
+        //     position is not specified)
         Position left;
         Position right;
 };

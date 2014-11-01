@@ -25,11 +25,14 @@ struct Status
 };
 
 /*
-TODO:
-    Switch to a free list, it will be much more efficient.
-    There will be minimally more fragmentation, but allocating will be
-        simpler and faster, since what we need is right there.
+TODO
+    Keep ranges ordered and not fragmented
+        This should be fine as long as the user doesn't modify the index file
+    Design a more efficient algorithm for finding/using byte ranges
+    Make the byte range methods less redundant
+*/
 
+/*
 This class keeps track of free byte ranges of a key file.
 It uses an index file to store this information.
     There is a list of ranges of free bytes. Example:
@@ -51,8 +54,11 @@ class BlockTracker
         // Returns a usable position, or -1 if unable to allocate
         Status allocate(Position size, Position left = 0, Position right = 0);
 
-        // Marks a range of blocks as used
+        // Marks a range of bytes as used
         void markAsUsed(Position pos, Position size);
+
+        // Returns true if the range of bytes is available
+        bool isFree(Position pos, Position size) const;
 
         // Returns the size of the total file
         Position getSize() const;

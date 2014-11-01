@@ -2,6 +2,7 @@
 // This code is licensed under GPLv3, see LICENSE.txt for details.
 
 #include <iostream>
+#include <sstream>
 #include "key.h"
 #include "keygenerator.h"
 
@@ -20,10 +21,19 @@ int main()
     otp::Key keyFile(filename);
     if (keyFile)
     {
-        //keyFile.setKeyRange(0, 200);
         std::cout << "Key file \"" << filename << "\" loaded.\n";
         std::cout << "Space free: " << keyFile.bytesFree() << " bytes\n";
         std::cout << "Space used: " << keyFile.bytesUsed() << "/" << keyFile.bytesTotal() << " bytes\n";
+
+        std::cout << "Enter range of bytes to use (min max): ";
+        std::string rangeStr;
+        getline(std::cin, rangeStr);
+        std::istringstream stream(rangeStr);
+        otp::Position min = 0;
+        otp::Position max = 0;
+        stream >> min >> max;
+        keyFile.setKeyRange(min, max);
+
         std::cout << "Space free (range): " << keyFile.bytesFreeRange() << " bytes\n";
         std::cout << "Space used (range): " << keyFile.bytesUsedRange() << "/" << keyFile.bytesTotalRange() << " bytes\n";
 

@@ -52,8 +52,6 @@ Status BlockTracker::allocate(Position size, Position left, Position right)
                 // Save the available position
                 available.position = left;
 
-                std::cout << "Left > min (" << left << " > " << freeBytes[i].minimum << ") inserted range at " << i << ".\n";
-
                 // Create a new range, and split at the left
                 freeBytes.insert(freeBytes.begin() + i, freeBytes[i]);
                 freeBytes[i].maximum = left - 1;
@@ -93,7 +91,6 @@ void BlockTracker::markAsUsed(Position pos, Position size)
             }
             else
             {
-                std::cout << "Pos != min (" << pos << " != " << freeBytes[i].minimum << ") inserted range at " << i << ".\n";
                 // Create a new range (100-200 becomes 100-120, 180-200)
                 freeBytes.insert(freeBytes.begin() + i, freeBytes[i]);
                 freeBytes[i].maximum = pos - 1;
@@ -102,6 +99,17 @@ void BlockTracker::markAsUsed(Position pos, Position size)
             break;
         }
     }
+}
+
+bool BlockTracker::isFree(Position pos, Position size) const
+{
+    Position right = pos + size;
+    for (const auto& range: freeBytes)
+    {
+        if (range == pos && range == right)
+            return true;
+    }
+    return false;
 }
 
 Position BlockTracker::getSize() const
